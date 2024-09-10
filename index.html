@@ -1,0 +1,39 @@
+<script>
+    $(function () {
+        // 로그인 처리
+        $(document).on("submit", "#formLogin", function (event) {
+            event.preventDefault(); // 기본 폼 제출 방지
+            
+            const userId = $("input[name='userId']").val();
+            const userPw = $("input[name='userPw']").val();
+    
+            if (!userId) {
+                alert("아이디를 입력하세요.");
+                $("input[name='userId']").focus();
+                return false;
+            } else if (!userPw) {
+                alert("비밀번호를 입력하세요.");
+                $("input[name='userPw']").focus();
+                return false;
+            }
+    
+            // AJAX 요청
+            $.ajax({
+                type: "POST",
+                url: "/login/checkin", // 서버 로그인 처리 URL
+                data: { userId: userId, userPw:123456 },
+                success: function(response) {
+                    if (response.success) { // 서버에서 성공 응답을 받으면
+                        window.location.href = "next-page.html"; // 회원 관리 화면으로 리다이렉트
+                    } else {
+                        alert(response.message); // 실패 메시지 표시
+                    }
+                },
+                error: function() {
+                    alert("로그인 중 오류가 발생했습니다.");
+                }
+            });
+        });
+    });
+    </script>
+    
