@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>회원 관리 페이지</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .buttonBox { margin-top: 20px; }
+        .layerPopup { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; }
+        .popupContent { background: white; padding: 20px; border-radius: 5px; width: 400px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<h1>회원 관리 페이지</h1>
+
+<div>
+    <button id="btnAddConsult">상담 추가</button>
+    <button id="btnManageConsult">상담 관리</button>
+</div>
+
+<div class="layerPopup">
+    <div class="popupContent">
+        <h3 id="popupTitle"></h3>
+        <div id="popupBody"></div>
+        <div class="buttonBox">
+            <button id="btnClosePopup">닫기</button>
+        </div>
+    </div>
+</div>
+
+<script>
+$(function () {
+    // 로그인 상태 확인
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'; // 로그인 상태 확인
+
+    if (!isLoggedIn) {
+        alert('로그인 후 이용 가능합니다.');
+        window.location.href = 'login.html'; // 로그인 페이지로 리다이렉트
+        return;
+    }
+
+    // 상담 목록을 localStorage에서 불러오기
+    let consultList = JSON.parse(localStorage.getItem('consultList')) || [];
+
+    // 상담 추가 버튼 클릭 이벤트
+    $('#btnAddConsult').on('click', function () {
+        $('#popupTitle').text('상담 추가');
+        $('#popupBody').html(makeAddConsultForm());
+        $('.layerPopup').fadeIn();
+    });
+
+    // 상담 관리 버튼 클릭 이벤트
+    $('#btnManageConsult').on('click', function () {
+        $('#popupTitle').text('상담 관리');
+        $('#popupBody').html(makeManageConsultList());
+        displayConsultList(); // 상담 목록 표시
+        $('.layerPopup').fadeIn();
+    });
+
+    // 팝업 닫기 버튼 클릭 이벤트
+    $('#btnClosePopup').on('click', function () {
+        $('.layerPopup').fadeOut();
+    });
+
+    // 상담 추가 폼 생성
+    function makeAddConsultForm() {
+        return `
+            <form id="formAddConsult">
+                <label for="consultDate">상담 날짜:</label>
+                <input type="date" id="consultDate" name="consultDate" required><br>
+                <label for="customerName">고객명:</label>
+                <input type="text" id="customerName" name="customerName" required><br>
+                
+                <label for="carrier">통신사:</label>
+                <select id="carrier" name="carrier" required>
+                    <option value="">선택하세요</option>
+                    <option value="skt">SKT</option>
+                    <option value="kt">KT</option>
+                    <option value="lg">LG</option>
+                    <option value="sk-alty">SK 알뜰</option>
+                    <option value="kt-alty">KT 알뜰</option>
+                    <option value="lg-alty">LG 알뜰</option>
+                </select><br>
+                
+                <label for="bundle">결합:</label>
+                <input type="text" id="bundle" name="bundle" required><br>
+                
+                <label for="penalty">위약금:</label>
+                <input type="text" id="penalty" name="penalty" required oninput="validateNumber(this)"><br>
+                
+                <label for="installment">할부금:</label>
+                <input type="text" id="installment" name="installment" required oninput="validateNumber(this)"><br>
+                
+                <label for="averageUsage">평균 사용량:</label>
+                <input type="text" id="averageUsage" name="averageUsage" required oninput="validateNumber(this)"><br>
+                
+                <label for="remarks">비고:</label>
+                <textarea id="remarks" name="remarks"></textarea><br>
+                
+                <div class="buttonBox">
+                    <button type="submit">추가하기</button>
+                </div>
+            </form>
+        `;
+    }
+
+    // 상담 관리 목록 생성
+    function makeManageConsultList() {
+        return `
+            <div id="consultList">
+                <h4>상담 목록</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>상담 날짜</th>
+                            <th>고객명</th>
+                            <th>통신사</th>
+                            <th>재판매완료</th>
+                        </tr>
+                    </thead>
+                    <tbody id="consultItems"></tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    // 숫자 입력 검증 함수
+    function validateNumber(input) {
+        const value = input.value;
+        if (isNaN(value) && value !== "") {
+            alert('숫자만 입력하세요!');
+            input.value = '';
+        }
+    }
+
+    // 상담 추가 폼 제출 이벤트
+    $(document).on('submit', '#formAddConsult', function (event) {
+        event.preventDefault();
+        const customerName = $('#customerName').val();
+        const carrier = $('#carrier').val();
+        const bundle = $('#bundle').val();
+        const penalty = $('#penalty').val();
+        const installment = $('#installment').val();
+        const averageUsage = $('#averageUsage').val();
+        const remarks = $('#remarks').val();
+        const consultDate = $('#consultDate').val();
+        const currentTime = new Date().toLocaleTimeString(); // 현재 시간
+
+        // 상담 추가 로직
+        consultList.push({ customerName, carrier, bundle, penalty, installment, averageUsage, remarks, consultDate, time: currentTime, resaleCompleted: false });
+        localStorage.setItem('consultList', JSON.stringify(consultList));
+        alert('상담이 추가되었습니다.');
+
+        // 상담 목록으로 화면 전환
+        $('#popupTitle').text('상담 관리');
+        $('#popupBody').html(makeManageConsultList());
+        displayConsultList(); // 상담 목록 표시
+    });
+
+    // 상담 목록 표시
+    function displayConsultList() {
+        const consultItems = $('#consultItems');
+        consultItems.empty(); // 기존 항목 삭제
+        consultList.forEach((consult, index) => {
+            consultItems.append(`
+                <tr class="consult-item" data-index="${index}">
+                    <td>${consult.consultDate} ${consult.time}</td>
+                    <td class="customer-name">${consult.customerName}</td>
+                    <td>${consult.carrier}</td>
+                    <td>
+                        <input type="checkbox" class="resaleCheckbox" name="resale-${index}" ${consult.resaleCompleted ? 'checked' : ''}>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+
+    // 상담 항목 클릭 이벤트
+    $(document).on('click', '.consult-item', function (event) {
+        // 체크박스 클릭 시 상세보기 방지
+        if (!$(event.target).hasClass('resaleCheckbox')) {
+            const index = $(this).data('index');
+            const consult = consultList[index];
+            $('#popupTitle').text('상담 상세 내용');
+            $('#popupBody').html(`
+                <p><strong>상담 날짜:</strong> ${consult.consultDate} ${consult.time}</p>
+                <p><strong>고객명:</strong> ${consult.customerName}</p>
+                <p><strong>통신사:</strong> ${consult.carrier}</p>
+                <p><strong>결합:</strong> ${consult.bundle}</p>
+                <p><strong>위약금:</strong> ${consult.penalty}</p>
+                <p><strong>할부금:</strong> ${consult.installment}</p>
+                <p><strong>평균 사용량:</strong> ${consult.averageUsage}</p>
+                <p><strong>비고:</strong> ${consult.remarks}</p>
+            `);
+            $('.layerPopup').fadeIn();
+        }
+    });
+
+    // 재판매완료 체크박스 상태 변경 이벤트
+    $(document).on('change', '.resaleCheckbox', function () {
+        const index = $(this).closest('.consult-item').data('index');
+        consultList[index].resaleCompleted = this.checked;
+        localStorage.setItem('consultList', JSON.stringify(consultList)); // 상태 저장
+    });
+});
+</script>
+</body>
+</html>
